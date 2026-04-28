@@ -218,3 +218,14 @@ __marimo__/
 .streamlit/secrets.toml
 
 artifact/
+artifact
+venv
+env
+.gitignore
+logs
+template.py
+demo.py
+README.md
+LICENSE
+src.egg.-info
+notebook
