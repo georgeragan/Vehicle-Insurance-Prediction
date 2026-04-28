@@ -3,15 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from starlette.responses import HTMLResponse, RedirectResponse
 from uvicorn import run as app_run
-
-from typing import Optional
+from pydantic import BaseModel
 
 # Importing constants and pipeline modules from the project
 from src.constants import APP_HOST, APP_PORT
 from src.pipline.prediction_pipeline import VehicleData, VehicleDataClassifier
-from src.pipline.training_pipeline import TrainPipeline
 
 # Initialize FastAPI application
 app = FastAPI()
@@ -34,43 +31,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class DataForm:
-    """
-    DataForm class to handle and process incoming form data.
-    This class defines the vehicle-related attributes expected from the form.
-    """
-    def __init__(self, request: Request):
-        self.request: Request = request
-        self.Gender: Optional[int] = None
-        self.Age: Optional[int] = None
-        self.Driving_License: Optional[int] = None
-        self.Region_Code: Optional[float] = None
-        self.Previously_Insured: Optional[int] = None
-        self.Annual_Premium: Optional[float] = None
-        self.Policy_Sales_Channel: Optional[float] = None
-        self.Vintage: Optional[int] = None
-        self.Vehicle_Age_lt_1_Year: Optional[int] = None
-        self.Vehicle_Age_gt_2_Years: Optional[int] = None
-        self.Vehicle_Damage_Yes: Optional[int] = None
-                
-
-    async def get_vehicle_data(self):
-        """
-        Method to retrieve and assign form data to class attributes.
-        This method is asynchronous to handle form data fetching without blocking.
-        """
-        form = await self.request.form()
-        self.Gender = form.get("Gender")
-        self.Age = form.get("Age")
-        self.Driving_License = form.get("Driving_License")
-        self.Region_Code = form.get("Region_Code")
-        self.Previously_Insured = form.get("Previously_Insured")
-        self.Annual_Premium = form.get("Annual_Premium")
-        self.Policy_Sales_Channel = form.get("Policy_Sales_Channel")
-        self.Vintage = form.get("Vintage")
-        self.Vehicle_Age_lt_1_Year = form.get("Vehicle_Age_lt_1_Year")
-        self.Vehicle_Age_gt_2_Years = form.get("Vehicle_Age_gt_2_Years")
-        self.Vehicle_Damage_Yes = form.get("Vehicle_Damage_Yes")
+class VehicleDataModel(BaseModel):
+    Gender: int
+    Age: int
+    Driving_License: int
+    Region_Code: float
+    Previously_Insured: int
+    Annual_Premium: float
+    Policy_Sales_Channel: float
+    Vintage: int
+    Vehicle_Age_lt_1_Year: int
+    Vehicle_Age_gt_2_Years: int
+    Vehicle_Damage_Yes: int
 
 # Route to render the main page with the form
 @app.get("/", tags=["authentication"])
@@ -80,42 +52,25 @@ async def index(request: Request):
     """
     return templates.TemplateResponse(request, "vehicledata.html", {"context": "Rendering"})
 
-# Route to trigger the model training process
-@app.get("/train")
-async def trainRouteClient():
-    """
-    Endpoint to initiate the model training pipeline.
-    """
-    try:
-        train_pipeline = TrainPipeline()
-        train_pipeline.run_pipeline()
-        return Response("Training successful!!!")
-
-    except Exception as e:
-        return Response(f"Error Occurred! {e}")
-
 # Route to handle form submission and make predictions
 @app.post("/")
-async def predictRouteClient(request: Request):
+async def predictRouteClient(request: Request, data: VehicleDataModel):
     """
     Endpoint to receive form data, process it, and make a prediction.
     """
     try:
-        form = DataForm(request)
-        await form.get_vehicle_data()
-        
         vehicle_data = VehicleData(
-                                Gender= form.Gender,
-                                Age = form.Age,
-                                Driving_License = form.Driving_License,
-                                Region_Code = form.Region_Code,
-                                Previously_Insured = form.Previously_Insured,
-                                Annual_Premium = form.Annual_Premium,
-                                Policy_Sales_Channel = form.Policy_Sales_Channel,
-                                Vintage = form.Vintage,
-                                Vehicle_Age_lt_1_Year = form.Vehicle_Age_lt_1_Year,
-                                Vehicle_Age_gt_2_Years = form.Vehicle_Age_gt_2_Years,
-                                Vehicle_Damage_Yes = form.Vehicle_Damage_Yes
+                                Gender=data.Gender,
+                                Age=data.Age,
+                                Driving_License=data.Driving_License,
+                                Region_Code=data.Region_Code,
+                                Previously_Insured=data.Previously_Insured,
+                                Annual_Premium=data.Annual_Premium,
+                                Policy_Sales_Channel=data.Policy_Sales_Channel,
+                                Vintage=data.Vintage,
+                                Vehicle_Age_lt_1_Year=data.Vehicle_Age_lt_1_Year,
+                                Vehicle_Age_gt_2_Years=data.Vehicle_Age_gt_2_Years,
+                                Vehicle_Damage_Yes=data.Vehicle_Damage_Yes
                                 )
 
         # Convert form data into a DataFrame for the model
